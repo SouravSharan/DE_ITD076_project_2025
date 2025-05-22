@@ -1,62 +1,82 @@
 import requests
-import json
+import subprocess
 import os
 import time
 
-# Replace with your GitHub token if needed
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Set your GitHub token as an environment variable
+HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
+SEARCH_URL = "https://api.github.com/search/code"
+REPO_URL = "https://api.github.com/repos/{}"
+QUERY = "filename:pom.xml"
+PER_PAGE = 50  # Lower to avoid hitting secondary rate limits
+MAX_PAGES = 5  # Adjust as needed
 
-def github_search(query, per_page=100, page=1):
-    headers = {}
-    if GITHUB_TOKEN:
-        headers['Authorization'] = f'token {GITHUB_TOKEN}'
-    params = {'q': query, 'per_page': per_page, 'page': page}
-    response = requests.get('https://api.github.com/search/repositories', headers=headers, params=params)
-    response.raise_for_status()  # Raise an exception for bad status codes
-    return response.json()
+def search_repos():
+    repos = set()
+    for page in range(1, MAX_PAGES + 1):
+        params = {
+            "q": QUERY,
+            "per_page": PER_PAGE,
+            "page": page
+        }
+        resp = requests.get(SEARCH_URL, headers=HEADERS, params=params)
+        print(f"Status: {resp.status_code}, URL: {resp.url}")
+        resp.raise_for_status()
+        data = resp.json()
+        for item in data.get("items", []):
+            repo = item["repository"]
+            # Fetch repo details to get clone_url
+            repo_resp = requests.get(REPO_URL.format(repo["full_name"]), headers=HEADERS)
+            if repo_resp.status_code == 200:
+                repo_data = repo_resp.json()
+                repos.add((repo["full_name"], repo_data["clone_url"]))
+            else:
+                print(f"Failed to fetch repo details for {repo['full_name']}")
+            time.sleep(0.5)  # Be nice to the API
+        # Respect rate limits
+        time.sleep(2)
+    return list(repos)
 
-def crawl_java_maven_projects(num_projects=1000):
-    all_projects = []
-    query = 'language:Java filename:pom.xml'
-    per_page = 100
-    page = 1
+def is_java_repo(full_name):
+    url = REPO_URL.format(full_name)
+    resp = requests.get(url, headers=HEADERS)
+    if resp.status_code != 200:
+        print(f"Failed to fetch repo info for {full_name}")
+        return False
+    data = resp.json()
+    language = data.get("language")
+    if language is None:
+        print(f"Repo {full_name} has no detected language.")
+        return False
+    return language.lower() == "java"
 
-    while len(all_projects) < num_projects:
+def clone_repo(clone_url, dest_dir):
+    if not os.path.exists(dest_dir):
+        subprocess.run(["git", "clone", clone_url, dest_dir], check=True)
+    else:
+        print(f"Directory {dest_dir} already exists, skipping.")
+
+def main():
+    repos = search_repos()
+    print(f"Found {len(repos)} repositories with pom.xml.")
+    java_repos = []
+    for full_name, clone_url in repos:
+        print(f"Checking if {full_name} is a Java repo...")
+        if is_java_repo(full_name):
+            java_repos.append((full_name, clone_url))
+        else:
+            print(f"Skipping {full_name}, not a Java repo.")
+        time.sleep(1)  # Be nice to the API
+
+    print(f"Found {len(java_repos)} Java Maven repositories.")
+    for full_name, clone_url in java_repos:
+        name = full_name.replace("/", "_")
+        print(f"Cloning {full_name}...")
         try:
-            results = github_search(query, per_page, page)
-            if not results['items']:
-                print("No more projects found.")
-                break
-
-            for item in results['items']:
-                all_projects.append({
-                    'url': item['html_url'],
-                    'owner': item['owner']['login'],
-                    'repo_name': item['name'],
-                    'clone_url': item['clone_url']
-                    # Add other relevant information you need
-                })
-
-            print(f"Fetched {len(all_projects)} projects...")
-            page += 1
-            time.sleep(1) # Be mindful of rate limits
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error during API request: {e}")
-            time.sleep(10) # Wait longer if there's an error
-        except ValueError as e:
-            print(f"Error decoding JSON: {e}")
-            break
-
-        if page > 10: # Basic safeguard against infinite loops
-            print("Reached maximum number of pages to check (for demonstration).")
-            break
-
-    return all_projects[:num_projects] # Ensure we don't exceed the target
+            clone_repo(clone_url, f"./cloned_repos/{name}")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to clone {full_name}: {e}")
 
 if __name__ == "__main__":
-    java_maven_projects = crawl_java_maven_projects()
-    print(f"Found {len(java_maven_projects)} Java projects with Maven.")
-    # Save the list to a file (e.g., projects.json)
-    with open("java_maven_projects.json", "w") as f:
-        json.dump(java_maven_projects, f, indent=4)
+    os.makedirs("./cloned_repos", exist_ok=True)
+    main()
