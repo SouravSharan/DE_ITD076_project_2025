@@ -1,0 +1,370 @@
+[
+    {
+        "repository_name": "uk0_vladimir-tools",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "star-love-letter_star-love-letter-back",
+        "total_tests": 2,
+        "failed": 3,
+        "errors": 4,
+        "skipped": 3,
+        "success": false
+    },
+    {
+        "repository_name": "pennythoughts1_Inkblot-1.1",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "BlameFelix_CovidTracker",
+        "total_tests": 1,
+        "failed": 2,
+        "errors": 3,
+        "skipped": 2,
+        "success": false
+    },
+    {
+        "repository_name": "gone-phishing_SDW",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "haoruilong_xdhpx-config",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "WebarchivCZ_OpenWayback-devel",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "rwl_CSparseJ",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "miome_liliths-throne-borked",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "kocicjelena_swaggerhierarchy",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "vladchobotok_chatgpt-junior-task-3",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "pellcorp_cobertura-maven-plugin",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "demonlexe_Cerberus",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "shinobushiva_pptgen",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "avergnaud_patterns-adapter-spring",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "oaqa_bagpipes",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "OtavioCastro_projetoJSF",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "ep-infosec_27_lmco_streamflow",
+        "total_tests": 8,
+        "failed": 8,
+        "errors": 8,
+        "skipped": 8,
+        "success": false
+    },
+    {
+        "repository_name": "gazarenkov_che-sketch",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "hans-enders_simplistic.rabbitMQ_sca-MAR2022",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "kumarbaburaavi_carrental",
+        "total_tests": 1,
+        "failed": 2,
+        "errors": 3,
+        "skipped": 2,
+        "success": false
+    },
+    {
+        "repository_name": "ARJUNMALLIKA_mallikarjun56",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "JonathanDiz_mini_mario_project_x2",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "ishwetraj17_ecommerce-platform",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "macrotea_spring-data-mongodb-showcase",
+        "total_tests": 2,
+        "failed": 2,
+        "errors": 2,
+        "skipped": 2,
+        "success": true
+    },
+    {
+        "repository_name": "phact_dynamo-cassandra-proxy",
+        "total_tests": 2,
+        "failed": 2,
+        "errors": 2,
+        "skipped": 2,
+        "success": true
+    },
+    {
+        "repository_name": "jeszy75_javafx-board-game-example3-game-over",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "OracleNATD_gamerentals.com-jcs",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "DanyHidalgo_QuickMart-Backend",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "hedyn_wsonrpc",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": true
+    },
+    {
+        "repository_name": "jandk_tinyjson",
+        "total_tests": 8,
+        "failed": 8,
+        "errors": 8,
+        "skipped": 8,
+        "success": true
+    },
+    {
+        "repository_name": "VISITNEOM_CM-AEM-VISITNEOM",
+        "total_tests": 6,
+        "failed": 6,
+        "errors": 6,
+        "skipped": 6,
+        "success": false
+    },
+    {
+        "repository_name": "xshxsh_schedule",
+        "total_tests": 2,
+        "failed": 2,
+        "errors": 2,
+        "skipped": 2,
+        "success": true
+    },
+    {
+        "repository_name": "opendaylight_alto",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "Nasdanika_core",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "phmiranda_oracle-se",
+        "total_tests": 2,
+        "failed": 2,
+        "errors": 2,
+        "skipped": 2,
+        "success": true
+    },
+    {
+        "repository_name": "johanvos_qsocket",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "thermz_Simplernate",
+        "total_tests": 3,
+        "failed": 3,
+        "errors": 3,
+        "skipped": 3,
+        "success": false
+    },
+    {
+        "repository_name": "HBTGmbH_salat",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "data2health_CD2H-search",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "ZhuQingTing_leetcode",
+        "total_tests": 4,
+        "failed": 4,
+        "errors": 4,
+        "skipped": 4,
+        "success": true
+    },
+    {
+        "repository_name": "sickworm_ZXingDialog",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "pp-thelightlord_Distributed-Minisql",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "wildmaster84_DeviceAPI",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "sravankadium_dummybot-example-saml",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    },
+    {
+        "repository_name": "naveenganji_matrix_rain",
+        "total_tests": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "success": false
+    }
+]

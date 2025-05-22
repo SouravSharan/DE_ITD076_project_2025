@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: preprocessing
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: preprocessing
+  template:
+    metadata:
+      labels:
+        app: preprocessing
+    spec:
+      containers:
+      - name: preprocessing
+        image: your-docker-repo/project-preprocessing:latest
+        command: ["python", "/app/preprocessing.py"]

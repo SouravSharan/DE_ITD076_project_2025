@@ -1,0 +1,12 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: scalability-test
+spec:
+  template:
+    spec:
+      containers:
+      - name: scalability-test
+        image: your-docker-repo/scalability-runner:latest
+        command: ["python", "/app/run_scalability_tests.py"]
+      restartPolicy: Never

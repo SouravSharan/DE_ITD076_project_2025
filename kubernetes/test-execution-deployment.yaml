@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-execution
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: test-execution
+  template:
+    metadata:
+      labels:
+        app: test-execution
+    spec:
+      containers:
+      - name: test-execution
+        image: your-docker-repo/maven-test-runner:latest
+        command: ["python", "/app/run_tests.py"]
