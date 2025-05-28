@@ -1,0 +1,61 @@
+services:
+  master:
+    image: master-worker-image
+    container_name: master-node
+    privileged: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace  # Mount workspace so edits reflect
+      - ./ansible:/ansible  # Mount ansible folder dynamically
+    networks:
+      - cluster_network
+
+  worker1:
+    image: master-worker-image
+    container_name: worker1
+    privileged: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+    networks:
+      - cluster_network
+
+  worker2:
+    image: master-worker-image
+    container_name: worker2
+    privileged: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+    networks:
+      - cluster_network
+
+    worker3:
+      image: master-worker-image
+      container_name: worker3
+      privileged: true
+      tty: true
+      volumes:
+        - ./workspace:/workspace
+        - ./ansible:/ansible
+      networks:
+        - cluster_network
+      
+    worker4:
+      image: master-worker-image
+      container_name: worker4
+      privileged: true
+      tty: true
+      volumes:
+        - ./workspace:/workspace
+        - ./ansible:/ansible
+      networks:
+        - cluster_network
+      
+         
+
+networks:
+  cluster_network:
+    driver: bridge

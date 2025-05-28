@@ -1,0 +1,24 @@
+---
+- hosts: workers
+  become: yes
+  tasks:
+    - name: Clone repositories
+      command: git clone "{{ item }}" "/workspace/cloned_repos/{{ item | regex_replace('/', '_') }}"
+      with_items:
+        - "{{ lookup('file', '/workspace/repos.txt').splitlines() }}"
+      ignore_errors: yes
+
+    - name: Run unit tests inside Docker containers
+      command: docker run --rm -v "/workspace/cloned_repos/{{ item }}:/app" -w /app maven:3.8-jdk-11 mvn clean test
+      with_items:
+        - "{{ lookup('file', '/workspace/repos.txt').splitlines() }}"
+      ignore_errors: yes
+
+    - name: Collect execution metrics
+      command: free -m && uptime && docker stats --no-stream
+      register: metrics_output
+
+    - name: Save metrics results
+      copy:
+        content: "{{ metrics_output.stdout }}"
+        dest: "/workspace/test_results.txt"
