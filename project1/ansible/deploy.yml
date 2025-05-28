@@ -1,0 +1,45 @@
+- hosts: workers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install pip and dependencies
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: Install pika module
+      pip:
+        name: pika
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Add user to docker group
+      become: yes
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Copy project files
+      copy:
+        src: ../worker/
+        dest: /home/ubuntu/project1/worker/
+        mode: 0755
+
+    - name: Build docker image on worker without BuildKit
+      command: docker build -t tester .
+      args:
+        chdir: /home/ubuntu/project1/worker
+      environment:
+        DOCKER_BUILDKIT: "0"
+      register: docker_build_output
+      failed_when: docker_build_output.rc != 0
+
+    - name: Start worker script
+      shell: python3 /home/ubuntu/project1/worker/worker.py
