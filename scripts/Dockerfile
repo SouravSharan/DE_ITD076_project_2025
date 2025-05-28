@@ -1,38 +1,45 @@
-FROM python:3.8-buster
+# Use Python 3.9 slim base image
+FROM python:3.9-slim
 
-# Set non-interactive mode for apt
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+    PATH="/venv/bin:$PATH" \
+    VIRTUAL_ENV=/venv
 
-RUN apt update && apt install -y gnupg2 && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 04EE7237B7D453EC && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 648ACFD622F3D138
-RUN sed -i 's|http://deb.debian.org/debian|http://ftp.us.debian.org/debian|' /etc/apt/sources.list && \
-    apt update
-
-
-# Install system dependencies
-RUN apt update && apt install -y \
-    tzdata \
-    docker.io \
-    ansible \
+# Install system dependencies + Docker CLI (without daemon)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk \
+    wget \
     curl \
-    apt-transport-https \
+    git \
     ca-certificates \
-    gnupg \
-    && ln -fs /usr/share/zoneinfo/UTC /etc/localtime \
-    && dpkg-reconfigure -f noninteractive tzdata \
-    && apt clean \
+    && curl -fsSL https://get.docker.com | sh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python packages
-RUN pip install --no-cache-dir requests kubernetes
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && chmod +x kubectl \
+    && mv kubectl /usr/local/bin/
+
+# Create and activate virtual environment
+RUN python -m venv /venv
+
+# Upgrade pip and install Python packages
+RUN /venv/bin/pip install --upgrade pip && \
+    /venv/bin/pip install \
+    numpy \
+    pandas \
+    requests \
+    kubernetes \
+    docker \
+    ansible
 
 # Set working directory
 WORKDIR /workspace
 
-# Copy project files inside the container
+# Copy project files
 COPY workspace/ /workspace/
 COPY ansible/ /ansible/
 
-# Set environment for Python in workspace
-ENV PATH="/workspace/venv/bin:$PATH"
+# Set default command
+CMD ["/bin/bash"]
