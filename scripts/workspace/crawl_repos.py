@@ -24,6 +24,7 @@ REPO_URL = "https://api.github.com/repos/{}"
 QUERY = "filename:pom.xml"
 PER_PAGE = 50  
 MAX_PAGES = 5  
+MAX_REPOS_TO_DOWNLOAD = 10  # Set the limit for repositories to be cloned
 
 def search_repos():
     repos = set()
@@ -44,6 +45,10 @@ def search_repos():
         print(f"✅ Found {found_count} repositories on page {page}.")
         
         for item in data.get("items", []):
+            if len(repos) >= MAX_REPOS_TO_DOWNLOAD:
+                print("⚠️ Reached maximum repository limit. Stopping search.")
+                return list(repos)
+
             repo = item["repository"]
             repo_resp = requests.get(REPO_URL.format(repo["full_name"]), headers=HEADERS)
             if repo_resp.status_code == 200:
@@ -69,10 +74,14 @@ def main():
     os.makedirs("/workspace/cloned_repos", exist_ok=True)
     repos = search_repos()
     print(f"📁 Found {len(repos)} repositories with pom.xml.")
-    
+
     for idx, (full_name, clone_url) in enumerate(repos, start=1):
+        if idx > MAX_REPOS_TO_DOWNLOAD:
+            print("⚠️ Reached maximum repository download limit.")
+            break
+
         name = full_name.replace("/", "_")
-        print(f"🔄 [{idx}/{len(repos)}] Processing {full_name}...")
+        print(f"[{idx}/{MAX_REPOS_TO_DOWNLOAD}] Processing {full_name}...")
         clone_repo(clone_url, f"/workspace/cloned_repos/{name}")
 
     print("✅ Crawling completed!")

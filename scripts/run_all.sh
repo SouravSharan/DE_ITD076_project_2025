@@ -42,6 +42,8 @@ echo "✅ Unit tests executed across workers!"
 
 # Step 7: Collect performance metrics
 echo "📊 Collecting execution metrics..."
+
+docker exec -it master-node bash -c "mkdir -p /workspace && touch /workspace/test_metrics.log"
 docker exec -it master-node docker stats --no-stream | tee /workspace/test_metrics.log
 
 echo "✅ Performance metrics collected!"

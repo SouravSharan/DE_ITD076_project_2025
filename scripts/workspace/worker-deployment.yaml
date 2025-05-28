@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-nodes
+spec:
+  replicas: 4  # Number of workers
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker-container
+          image: master-worker-image  # Use prebuilt image
+          args: ["sleep", "infinity"]  # Keep container running
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+      volumes:
+        - name: workspace
+          hostPath:
+            path: /workspace
+

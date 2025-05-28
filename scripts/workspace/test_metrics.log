@@ -1,0 +1,8 @@
+CONTAINER ID   NAME          CPU %     MEM USAGE / LIMIT     MEM %     NET I/O          BLOCK I/O         PIDS
+500596b3d329   worker1       0.00%     1.629MiB / 14.97GiB   0.01%     17.3kB / 126B    94.2kB / 1.68MB   1
+611861f1c016   worker2       0.00%     1.523MiB / 14.97GiB   0.01%     17kB / 126B      0B / 1.68MB       1
+804248a725c9   worker4       0.00%     1.52MiB / 14.97GiB    0.01%     17kB / 126B      0B / 1.68MB       1
+fa2a32184fe5   worker3       0.00%     1.516MiB / 14.97GiB   0.01%     16.9kB / 126B    0B / 1.68MB       1
+68204e042bea   master-node   0.08%     51.55MiB / 14.97GiB   0.34%     124kB / 19.1kB   40.3MB / 1.68MB   22
+d2014e6fc78e   k8s-master    0.00%     720KiB / 14.97GiB     0.00%     17.1kB / 126B    0B / 0B           1
+a85f8f41df36   netbootxyz    0.01%     23.13MiB / 14.97GiB   0.15%     114kB / 126B     246kB / 28.7kB    18
