@@ -63,20 +63,3 @@ To view collected performance metrics:
 ```bash
 cat /workspace/test_metrics.log
 ```
-
----
-
-## ✨ **Contributing**
-Feel free to open issues or contribute via pull requests:
-```bash
-git checkout -b feature-branch
-git commit -m "Add new feature"
-git push origin feature-branch
-```
-Then open a **Pull Request** via GitHub.
-
----
-
-🚀 **Try it out and optimize testing for large-scale repositories!** 🔧🔥  
-
-Let me know if you’d like any further refinements. 🚀  
