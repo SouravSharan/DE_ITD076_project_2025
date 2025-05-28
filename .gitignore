@@ -1,0 +1,4 @@
+.env
+scripts/workspace/github_token.txt
+scripts/workspace/cloned_repos
+
