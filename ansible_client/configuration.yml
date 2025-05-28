@@ -1,0 +1,47 @@
+- hosts: all
+  become: true
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Docker and required packages
+      apt:
+        name:
+          - docker.io
+          - python3-pip
+        state: present
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Install Pika (Python RabbitMQ library)
+      pip:
+        name: pika
+        executable: pip3
+
+    - name: Copy mvn-test-runner image tar to target VMs
+      copy:
+         src: mvn-test-runner.tar
+         dest: /home/appuser/mvn-test-runner.tar
+
+    - name: Load Docker image on VMs
+      command: docker load -i /home/appuser/mvn-test-runner.tar
+
+    - name: Copy updated worker.py to all VMs
+      copy:
+        src: worker.py
+        dest: /home/appuser/worker.py
+        owner: appuser
+        group: appuser
+        mode: '0755'
+
