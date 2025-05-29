@@ -1,13 +1,19 @@
 from kubernetes import client, config
+import urllib3
 import os
 import time
 
-# Load Kubernetes config
-config.load_kube_config()
+# Disable SSL warnings (optional)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Get Kubernetes API client
+# Load Kubernetes config (local kubeconfig or in-cluster config)
+try:
+    config.load_kube_config()  # Use this if running outside the cluster
+except:
+    config.load_incluster_config()  # Use this if running inside a Kubernetes pod
+
+# Create Kubernetes API client
 batch_v1 = client.BatchV1Api()
-
 
 # Start timer
 start_time = time.time()
@@ -46,11 +52,9 @@ def create_kubernetes_job(repo_name):
 for repo in repos:
     create_kubernetes_job(repo)
 
-
 # End timer
 end_time = time.time()
 total_time = end_time - start_time
-
 
 # Log build time
 with open("/workspace/build_time.log", "w") as log_file:

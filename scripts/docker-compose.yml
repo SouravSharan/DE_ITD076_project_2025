@@ -2,31 +2,32 @@ version: '3.8'
 
 services:
   k8s-control-plane:
-    image: rancher/k3s  # Prebuilt lightweight Kubernetes image
+    image: rancher/k3s
     container_name: k8s-control-plane
     privileged: true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: ["server"]  # Start Kubernetes control plane
+    command: ["server"]
     networks:
       - cluster_network
 
   master:
-    image: python:3.8-buster
+    image: master-worker-image
     container_name: master-node
     privileged: true
     tty: true
     depends_on:
-      - k8s-control-plane  # Ensure Kubernetes starts first
+      - k8s-control-plane
     volumes:
       - ./workspace:/workspace
       - ./ansible:/ansible
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
     networks:
       - cluster_network
 
   k8s-master:
-    image: python:3.8-buster
+    image: master-worker-image
     container_name: k8s-master
     privileged: true
     tty: true
@@ -35,12 +36,13 @@ services:
     volumes:
       - ./workspace:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
-    command: ["sleep", "infinity"]  # Keep container running for manual commands
+      - ~/.kube:/root/.kube
+    command: ["sleep", "infinity"]
     networks:
       - cluster_network
 
   worker1:
-    image: python:3.8-buster
+    image: master-worker-image
     container_name: worker1
     privileged: true
     tty: true
@@ -50,11 +52,12 @@ services:
       - ./workspace:/workspace
       - ./ansible:/ansible
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
     networks:
       - cluster_network
 
   worker2:
-    image: python:3.8-buster
+    image: master-worker-image
     container_name: worker2
     privileged: true
     tty: true
@@ -64,11 +67,12 @@ services:
       - ./workspace:/workspace
       - ./ansible:/ansible
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
     networks:
       - cluster_network
 
   worker3:
-    image: python:3.8-buster
+    image: master-worker-image
     container_name: worker3
     privileged: true
     tty: true
@@ -78,11 +82,12 @@ services:
       - ./workspace:/workspace
       - ./ansible:/ansible
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
     networks:
       - cluster_network
       
   worker4:
-    image: python:3.8-buster
+    image: master-worker-image
     container_name: worker4
     privileged: true
     tty: true
@@ -92,6 +97,7 @@ services:
       - ./workspace:/workspace
       - ./ansible:/ansible
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
     networks:
       - cluster_network
 

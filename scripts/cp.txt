@@ -1,0 +1,818 @@
+===== Dockerfile =====
+# Use Python 3.9 slim base image
+FROM python:3.9-slim
+
+# Set environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+    PATH="/venv/bin:$PATH" \
+    VIRTUAL_ENV=/venv
+
+# Install system dependencies + Docker CLI (without daemon)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk \
+    wget \
+    curl \
+    git \
+    ca-certificates \
+    && curl -fsSL https://get.docker.com | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && chmod +x kubectl \
+    && mv kubectl /usr/local/bin/
+
+# Create and activate virtual environment
+RUN python -m venv /venv
+
+# Upgrade pip and install Python packages
+RUN /venv/bin/pip install --upgrade pip && \
+    /venv/bin/pip install \
+    numpy \
+    pandas \
+    requests \
+    kubernetes \
+    docker \
+    ansible
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy project files
+COPY workspace/ /workspace/
+COPY ansible/ /ansible/
+
+# Set default command
+CMD ["/bin/bash"]===== docker-compose.yml =====
+version: '3.8'
+
+services:
+  k8s-control-plane:
+    image: rancher/k3s
+    container_name: k8s-control-plane
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["server"]
+    networks:
+      - cluster_network
+
+  master:
+    image: master-worker-image
+    container_name: master-node
+    privileged: true
+    tty: true
+    depends_on:
+      - k8s-control-plane
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+    networks:
+      - cluster_network
+
+  k8s-master:
+    image: master-worker-image
+    container_name: k8s-master
+    privileged: true
+    tty: true
+    depends_on:
+      - k8s-control-plane
+    volumes:
+      - ./workspace:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+    command: ["sleep", "infinity"]
+    networks:
+      - cluster_network
+
+  worker1:
+    image: master-worker-image
+    container_name: worker1
+    privileged: true
+    tty: true
+    depends_on:
+      - k8s-control-plane
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+    networks:
+      - cluster_network
+
+  worker2:
+    image: master-worker-image
+    container_name: worker2
+    privileged: true
+    tty: true
+    depends_on:
+      - k8s-control-plane
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+    networks:
+      - cluster_network
+
+  worker3:
+    image: master-worker-image
+    container_name: worker3
+    privileged: true
+    tty: true
+    depends_on:
+      - k8s-control-plane
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+    networks:
+      - cluster_network
+      
+  worker4:
+    image: master-worker-image
+    container_name: worker4
+    privileged: true
+    tty: true
+    depends_on:
+      - k8s-control-plane
+    volumes:
+      - ./workspace:/workspace
+      - ./ansible:/ansible
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+    networks:
+      - cluster_network
+
+networks:
+  cluster_network:
+    driver: bridge
+===== run_all_1.sh =====
+#!/bin/bash
+
+echo "🚀 Starting distributed setup using Docker Compose..."
+
+# Step 1: Stop and remove existing containers
+docker-compose down --remove-orphans
+
+# Step 2: Build the image first
+echo "🔨 Building master-worker-image..."
+docker build -t master-worker-image .
+
+# Step 3: Start containers
+docker-compose up -d
+echo "📌 Containers started successfully!"
+
+# Step 3: Wait for k3s to be ready
+echo "⏳ Waiting for k3s control plane to be ready..."
+while ! docker exec k8s-control-plane kubectl get nodes >/dev/null 2>&1; do
+    echo "Waiting for k3s..."
+    sleep 5
+done
+
+# Step 4: Wait for k3s to be ready
+sleep 15
+
+# Step 5: Copy and apply RBAC first
+echo "🔐 Setting up RBAC..."
+docker cp ./job-role.yaml k8s-control-plane:/tmp/
+docker exec k8s-control-plane kubectl apply -f /tmp/job-role.yaml
+
+# Step 6: Copy worker deployment to k3s control plane and apply it
+echo "🛠️ Deploying worker pods..."
+docker cp ./workspace/worker-deployment.yaml k8s-control-plane:/tmp/
+docker exec k8s-control-plane kubectl apply -f /tmp/worker-deployment.yaml
+
+# Step 7: Configure kubeconfig for master-node
+echo "🔧 Configuring Kubernetes access..."
+docker exec master-node mkdir -p /root/.kube
+
+# Get the k3s server IP from the control plane container
+K3S_SERVER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' k8s-control-plane)
+
+# Extract kubeconfig and modify server URL
+docker exec k8s-control-plane cat /etc/rancher/k3s/k3s.yaml | \
+    sed "s/127.0.0.1:6443/${K3S_SERVER_IP}:6443/g" | \
+    sed "s/localhost:6443/${K3S_SERVER_IP}:6443/g" > temp_kubeconfig.yaml
+
+# Copy to master node
+docker cp temp_kubeconfig.yaml master-node:/root/.kube/config
+rm temp_kubeconfig.yaml
+
+# Set proper permissions
+docker exec master-node chmod 600 /root/.kube/config
+
+# Step 8: Verify cluster access from master-node
+echo "🔍 Verifying Kubernetes access from master-node..."
+sleep 5
+
+# Test connection
+if docker exec master-node kubectl get nodes; then
+    echo "✅ Kubernetes access configured successfully!"
+    docker exec master-node kubectl get pods -A
+else
+    echo "❌ Kubernetes access failed. Trying alternative approach..."
+    
+    # Alternative: Use service account token
+    echo "🔑 Setting up service account authentication..."
+    docker exec k8s-control-plane kubectl create serviceaccount automation-sa --dry-run=client -o yaml | docker exec -i k8s-control-plane kubectl apply -f -
+    docker exec k8s-control-plane kubectl create clusterrolebinding automation-sa-binding --clusterrole=cluster-admin --serviceaccount=default:automation-sa --dry-run=client -o yaml | docker exec -i k8s-control-plane kubectl apply -f -
+    
+    # Get token and create kubeconfig
+    TOKEN=$(docker exec k8s-control-plane kubectl create token automation-sa)
+    cat > temp_sa_kubeconfig.yaml << EOF
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://${K3S_SERVER_IP}:6443
+    insecure-skip-tls-verify: true
+  name: k3s
+contexts:
+- context:
+    cluster: k3s
+    user: automation-sa
+  name: k3s
+current-context: k3s
+users:
+- name: automation-sa
+  user:
+    token: ${TOKEN}
+EOF
+    
+    docker cp temp_sa_kubeconfig.yaml master-node:/root/.kube/config
+    rm temp_sa_kubeconfig.yaml
+    docker exec master-node chmod 600 /root/.kube/config
+    
+    # Test again
+    docker exec master-node kubectl get nodes
+fi
+
+# Step 9: Set timezone for master node
+echo "🕒 Setting timezone for master-node..."
+docker exec master-node bash -c "ln -fs /usr/share/zoneinfo/UTC /etc/localtime && dpkg-reconfigure -f noninteractive tzdata" 2>/dev/null
+
+# Step 10: Wait for worker pods to be ready (should work now)
+echo "⏳ Waiting for worker pods to be ready..."
+sleep 30  # Give pods time to start
+docker exec master-node kubectl get pods
+
+# Step 11: Run the test workflow
+echo "🔍 Running test workflow..."
+docker exec -it master-node python /workspace/crawl_repos.py
+docker exec -it master-node python /workspace/test_repos.py
+
+echo "🎉 Setup completed successfully!"===== scalability_test.py =====
+#!/bin/bash
+
+# Scalability test script
+echo "🚀 Starting scalability tests..."
+
+# Test configurations: workers, cpu, memory
+CONFIGS=(
+    "2 0.5 512m"
+    "4 1.0 1Gi"
+    "6 1.5 1.5Gi"
+    "8 2.0 2Gi"
+)
+
+# Function to update worker deployment
+update_worker_deployment() {
+    local replicas=$1
+    local cpu=$2
+    local memory=$3
+    
+    cat > /tmp/worker-deployment-scaled.yaml << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-nodes
+spec:
+  replicas: $replicas
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker-container
+        image: master-worker-image
+        args: ["sleep", "infinity"]
+        resources:
+          requests:
+            cpu: "${cpu}"
+            memory: "${memory}"
+          limits:
+            cpu: "${cpu}"
+            memory: "${memory}"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        hostPath:
+          path: /workspace
+          type: Directory
+EOF
+}
+
+# Function to run test with specific configuration
+run_test() {
+    local config_name=$1
+    local replicas=$2
+    local cpu=$3
+    local memory=$4
+    
+    echo "🔄 Testing configuration: $config_name (Workers: $replicas, CPU: $cpu, Memory: $memory)"
+    
+    # Clean up previous jobs
+    docker exec k8s-control-plane kubectl delete jobs --all
+    
+    # Update worker deployment
+    update_worker_deployment $replicas $cpu $memory
+    docker cp /tmp/worker-deployment-scaled.yaml k8s-control-plane:/tmp/
+    docker exec k8s-control-plane kubectl apply -f /tmp/worker-deployment-scaled.yaml
+    
+    # Wait for workers to be ready
+    echo "⏳ Waiting for $replicas workers to be ready..."
+    docker exec k8s-control-plane kubectl wait --for=condition=ready pod -l app=worker --timeout=300s
+    
+    # Record start time
+    START_TIME=$(date +%s)
+    
+    # Run the test
+    echo "🏃 Running test workflow..."
+    docker exec master-node python /workspace/test_repos.py
+    
+    # Wait for all jobs to complete and collect results
+    docker exec master-node python /workspace/collect_results.py
+    
+    # Record end time
+    END_TIME=$(date +%s)
+    TOTAL_TIME=$((END_TIME - START_TIME))
+    
+    # Save results with configuration info
+    echo "📊 Test completed in ${TOTAL_TIME} seconds"
+    
+    # Create results directory if it doesn't exist
+    mkdir -p /tmp/scalability_results
+    
+    # Copy results with configuration prefix
+    docker cp master-node:/workspace/build_results.json "/tmp/scalability_results/results_${config_name}.json"
+    docker cp master-node:/workspace/build_summary.txt "/tmp/scalability_results/summary_${config_name}.txt"
+    
+    # Add configuration info to summary
+    echo "Configuration: $replicas workers, $cpu CPU, $memory memory, Total time: ${TOTAL_TIME}s" >> "/tmp/scalability_results/summary_${config_name}.txt"
+    
+    echo "✅ Results saved for configuration: $config_name"
+    echo ""
+}
+
+# Run tests for each configuration
+for i in "${!CONFIGS[@]}"; do
+    config="${CONFIGS[$i]}"
+    read -r replicas cpu memory <<< "$config"
+    config_name="config_$((i+1))_${replicas}w_${cpu}cpu_${memory}mem"
+    
+    run_test "$config_name" "$replicas" "$cpu" "$memory"
+done
+
+# Generate final comparison report
+echo "📊 Generating scalability comparison report..."
+cat > /tmp/scalability_results/comparison_report.txt << EOF
+=== SCALABILITY TEST COMPARISON REPORT ===
+Generated: $(date)
+
+Configuration Summary:
+EOF
+
+for i in "${!CONFIGS[@]}"; do
+    config="${CONFIGS[$i]}"
+    read -r replicas cpu memory <<< "$config"
+    config_name="config_$((i+1))_${replicas}w_${cpu}cpu_${memory}mem"
+    
+    if [ -f "/tmp/scalability_results/summary_${config_name}.txt" ]; then
+        echo "Config $((i+1)): $replicas workers, $cpu CPU, $memory memory" >> /tmp/scalability_results/comparison_report.txt
+        grep -E "(Maven Builds:|Total Time:|Configuration:)" "/tmp/scalability_results/summary_${config_name}.txt" >> /tmp/scalability_results/comparison_report.txt
+        echo "" >> /tmp/scalability_results/comparison_report.txt
+    fi
+done
+
+echo "🎉 Scalability tests completed!"
+echo "📁 Results saved in: /tmp/scalability_results/"
+echo "📊 Comparison report: /tmp/scalability_results/comparison_report.txt"
+
+# Copy results back to your host
+echo "📋 Copying results to host..."
+cp -r /tmp/scalability_results ./scalability_results/
+echo "✅ Results available in: ./scalability_results/"
+===== job-role.yaml =====
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-runner
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: job-manager
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-manager-binding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: job-manager
+subjects:
+- kind: ServiceAccount
+  name: job-runner
+  namespace: default
+
+===== workspace/collect_results.py =====
+from kubernetes import client, config
+import time
+import json
+import os
+
+# Load Kubernetes config
+try:
+    config.load_kube_config()
+except:
+    config.load_incluster_config()
+
+batch_v1 = client.BatchV1Api()
+core_v1 = client.CoreV1Api()
+
+def collect_all_job_results():
+    """Collect results from all Maven build jobs"""
+    
+    # Wait for jobs to complete
+    print("⏳ Waiting for all jobs to complete...")
+    max_wait = 600  # 10 minutes
+    start_time = time.time()
+    
+    while time.time() - start_time < max_wait:
+        jobs = batch_v1.list_namespaced_job(namespace="default")
+        
+        completed_jobs = 0
+        failed_jobs = 0
+        running_jobs = 0
+        
+        for job in jobs.items:
+            if job.metadata.name.startswith("test-"):
+                if job.status.succeeded:
+                    completed_jobs += 1
+                elif job.status.failed:
+                    failed_jobs += 1
+                else:
+                    running_jobs += 1
+        
+        total_jobs = completed_jobs + failed_jobs + running_jobs
+        print(f"📊 Jobs status: {completed_jobs} completed, {failed_jobs} failed, {running_jobs} running (Total: {total_jobs})")
+        
+        if running_jobs == 0:
+            print("✅ All jobs completed!")
+            break
+            
+        time.sleep(10)
+    
+    # Collect logs from all jobs
+    results = []
+    jobs = batch_v1.list_namespaced_job(namespace="default")
+    
+    for job in jobs.items:
+        if job.metadata.name.startswith("test-"):
+            job_name = job.metadata.name
+            repo_name = job.metadata.labels.get('repo', 'unknown')
+            
+            # Get pods for this job
+            pods = core_v1.list_namespaced_pod(
+                namespace="default",
+                label_selector=f"job-name={job_name}"
+            )
+            
+            job_result = {
+                'job_name': job_name,
+                'repo_name': repo_name,
+                'status': 'unknown',
+                'duration': 0,
+                'logs': '',
+                'success': False
+            }
+            
+            if pods.items:
+                pod = pods.items[0]
+                
+                # Get job status
+                if job.status.succeeded:
+                    job_result['status'] = 'succeeded'
+                    job_result['success'] = True
+                elif job.status.failed:
+                    job_result['status'] = 'failed'
+                else:
+                    job_result['status'] = 'running'
+                
+                # Calculate duration
+                if job.status.start_time and job.status.completion_time:
+                    duration = (job.status.completion_time - job.status.start_time).total_seconds()
+                    job_result['duration'] = duration
+                
+                # Get logs
+                try:
+                    logs = core_v1.read_namespaced_pod_log(
+                        name=pod.metadata.name,
+                        namespace="default"
+                    )
+                    job_result['logs'] = logs
+                    
+                    # Check if Maven build was successful
+                    if "BUILD SUCCESS" in logs:
+                        job_result['maven_success'] = True
+                    elif "BUILD FAILURE" in logs:
+                        job_result['maven_success'] = False
+                    else:
+                        job_result['maven_success'] = None
+                        
+                except Exception as e:
+                    job_result['logs'] = f"Failed to get logs: {str(e)}"
+            
+            results.append(job_result)
+            print(f"📋 Collected results for {repo_name}: {job_result['status']}")
+    
+    return results
+
+def generate_report(results):
+    """Generate a comprehensive report"""
+    
+    total_jobs = len(results)
+    successful_jobs = len([r for r in results if r['success']])
+    failed_jobs = total_jobs - successful_jobs
+    
+    maven_success = len([r for r in results if r.get('maven_success') == True])
+    maven_failed = len([r for r in results if r.get('maven_success') == False])
+    maven_unknown = len([r for r in results if r.get('maven_success') is None])
+    
+    total_duration = sum([r['duration'] for r in results if r['duration'] > 0])
+    avg_duration = total_duration / len([r for r in results if r['duration'] > 0]) if results else 0
+    
+    report = {
+        'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'summary': {
+            'total_repositories': total_jobs,
+            'kubernetes_jobs_successful': successful_jobs,
+            'kubernetes_jobs_failed': failed_jobs,
+            'maven_builds_successful': maven_success,
+            'maven_builds_failed': maven_failed,
+            'maven_builds_unknown': maven_unknown,
+            'total_build_time_seconds': total_duration,
+            'average_build_time_seconds': avg_duration
+        },
+        'detailed_results': results
+    }
+    
+    return report
+
+# Main execution
+if __name__ == "__main__":
+    print("🔍 Collecting all Maven build results...")
+    results = collect_all_job_results()
+    
+    print("📊 Generating report...")
+    report = generate_report(results)
+    
+    # Save detailed report
+    with open('/workspace/build_results.json', 'w') as f:
+        json.dump(report, f, indent=2, default=str)
+    
+    # Save summary report
+    summary_text = f"""
+=== MAVEN BUILD RESULTS SUMMARY ===
+Timestamp: {report['timestamp']}
+
+📊 OVERALL STATISTICS:
+- Total Repositories: {report['summary']['total_repositories']}
+- Kubernetes Jobs Successful: {report['summary']['kubernetes_jobs_successful']}
+- Kubernetes Jobs Failed: {report['summary']['kubernetes_jobs_failed']}
+
+🔨 MAVEN BUILD RESULTS:
+- Successful Builds: {report['summary']['maven_builds_successful']}
+- Failed Builds: {report['summary']['maven_builds_failed']}
+- Unknown Status: {report['summary']['maven_builds_unknown']}
+
+⏱️ TIMING:
+- Total Build Time: {report['summary']['total_build_time_seconds']:.2f} seconds
+- Average Build Time: {report['summary']['average_build_time_seconds']:.2f} seconds
+
+🔍 DETAILED RESULTS:
+"""
+    
+    for result in results:
+        maven_status = "✅ SUCCESS" if result.get('maven_success') == True else "❌ FAILED" if result.get('maven_success') == False else "❓ UNKNOWN"
+        summary_text += f"- {result['repo_name']}: {maven_status} ({result['duration']:.1f}s)\n"
+    
+    with open('/workspace/build_summary.txt', 'w') as f:
+        f.write(summary_text)
+    
+    print("✅ Results saved to:")
+    print("  📄 /workspace/build_results.json (detailed)")
+    print("  📄 /workspace/build_summary.txt (summary)")
+    print(f"\n📊 QUICK SUMMARY:")
+    print(f"  Maven Builds: {report['summary']['maven_builds_successful']}/{report['summary']['total_repositories']} successful")
+    print(f"  Total Time: {report['summary']['total_build_time_seconds']:.2f} seconds")
+===== workspace/crawl_repos.py =====
+import requests
+import subprocess
+import os
+import time
+
+# Read the token from a file
+def get_github_token():
+    token_file = "/workspace/github_token.txt"  # Path to token file
+    try:
+        with open(token_file, "r") as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        raise ValueError("❌ ERROR: GitHub token file not found!")
+
+# Set the token
+GITHUB_TOKEN = get_github_token()
+
+if not GITHUB_TOKEN:
+    raise ValueError("❌ ERROR: GitHub token missing! Set it using: export GITHUB_TOKEN='your_personal_access_token_here'")
+
+HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} 
+SEARCH_URL = "https://api.github.com/search/code"
+REPO_URL = "https://api.github.com/repos/{}"
+QUERY = "filename:pom.xml"
+PER_PAGE = 50  
+MAX_PAGES = 5  
+MAX_REPOS_TO_DOWNLOAD = 10  # Set the limit for repositories to be cloned
+
+def search_repos():
+    repos = set()
+    print("🔍 Starting GitHub repo search...")
+    
+    for page in range(1, MAX_PAGES + 1):
+        print(f"📄 Searching page {page}/{MAX_PAGES}...")
+        params = {"q": QUERY, "per_page": PER_PAGE, "page": page}
+        resp = requests.get(SEARCH_URL, headers=HEADERS, params=params)
+        
+        if resp.status_code == 401:
+            raise ValueError("❌ ERROR: Unauthorized (Check your GitHub token)")
+        elif resp.status_code != 200:
+            raise ValueError(f"❌ ERROR: GitHub API request failed with status {resp.status_code}")
+
+        data = resp.json()
+        found_count = len(data.get("items", []))
+        print(f"✅ Found {found_count} repositories on page {page}.")
+        
+        for item in data.get("items", []):
+            if len(repos) >= MAX_REPOS_TO_DOWNLOAD:
+                print("⚠️ Reached maximum repository limit. Stopping search.")
+                return list(repos)
+
+            repo = item["repository"]
+            repo_resp = requests.get(REPO_URL.format(repo["full_name"]), headers=HEADERS)
+            if repo_resp.status_code == 200:
+                repo_data = repo_resp.json()
+                repos.add((repo["full_name"], repo_data["clone_url"]))
+            else:
+                print(f"⚠️ Warning: Failed to fetch details for {repo['full_name']}")
+            time.sleep(0.5)  
+        
+        time.sleep(2)
+    
+    print(f"🔹 Total repositories found: {len(repos)}")
+    return list(repos)
+
+def clone_repo(clone_url, dest_dir):
+    if not os.path.exists(dest_dir):
+        print(f"🚀 Cloning {clone_url}...")
+        subprocess.run(["git", "clone", clone_url, dest_dir], check=True)
+    else:
+        print(f"⚠️ Skipping {dest_dir}, already exists.")
+
+def main():
+    os.makedirs("/workspace/cloned_repos", exist_ok=True)
+    repos = search_repos()
+    print(f"📁 Found {len(repos)} repositories with pom.xml.")
+
+    for idx, (full_name, clone_url) in enumerate(repos, start=1):
+        if idx > MAX_REPOS_TO_DOWNLOAD:
+            print("⚠️ Reached maximum repository download limit.")
+            break
+
+        name = full_name.replace("/", "_")
+        print(f"[{idx}/{MAX_REPOS_TO_DOWNLOAD}] Processing {full_name}...")
+        clone_repo(clone_url, f"/workspace/cloned_repos/{name}")
+
+    print("✅ Crawling completed!")
+
+if __name__ == "__main__":
+    main()
+===== workspace/test_repos.py =====
+from kubernetes import client, config
+import urllib3
+import os
+import time
+
+# Disable SSL warnings (optional)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Load Kubernetes config (local kubeconfig or in-cluster config)
+try:
+    config.load_kube_config()  # Use this if running outside the cluster
+except:
+    config.load_incluster_config()  # Use this if running inside a Kubernetes pod
+
+# Create Kubernetes API client
+batch_v1 = client.BatchV1Api()
+
+# Start timer
+start_time = time.time()
+
+repo_path = "/workspace/cloned_repos"
+repos = [repo for repo in os.listdir(repo_path)]
+
+def create_kubernetes_job(repo_name):
+    """Creates a Kubernetes Job for testing the repository"""
+    job_name = f"test-{repo_name}".lower().replace("_", "-")
+
+    job_manifest = {
+        "apiVersion": "batch/v1",
+        "kind": "Job",
+        "metadata": {"name": job_name},
+        "spec": {
+            "template": {
+                "metadata": {"labels": {"app": "unit-test"}},
+                "spec": {
+                    "containers": [
+                        {
+                            "name": "test-container",
+                            "image": "master-worker-image",
+                            "command": ["bash", "-c", f"cd /workspace/cloned_repos/{repo_name} && mvn clean test"]
+                        }
+                    ],
+                    "restartPolicy": "Never"
+                }
+            }
+        }
+    }
+
+    batch_v1.create_namespaced_job(namespace="default", body=job_manifest)
+    print(f"✅ Created Kubernetes job for {repo_name}")
+
+for repo in repos:
+    create_kubernetes_job(repo)
+
+# End timer
+end_time = time.time()
+total_time = end_time - start_time
+
+# Log build time
+with open("/workspace/build_time.log", "w") as log_file:
+    log_file.write(f"Total build time: {total_time:.2f} seconds\n")
+
+print(f"⏳ Total build time: {total_time:.2f} seconds")
+===== workspace/worker-deployment.yaml =====
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-nodes
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker-container
+        image: master-worker-image
+        args: ["sleep", "infinity"]
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        hostPath:
+          path: /workspace
+          type: Directory
